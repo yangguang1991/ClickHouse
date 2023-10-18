@@ -1177,7 +1177,7 @@ size_t CachedOnDiskReadBufferFromFile::getTotalSizeToRead()
 
 void CachedOnDiskReadBufferFromFile::setReadUntilPosition(size_t position)
 {
-    if (!allow_seeks_after_first_read)
+    if (initialized && !allow_seeks_after_first_read)
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Method `setReadUntilPosition()` not allowed");
 
     if (read_until_position == position)
