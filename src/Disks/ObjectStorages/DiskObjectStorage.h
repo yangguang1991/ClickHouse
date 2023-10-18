@@ -224,8 +224,6 @@ private:
     String getReadResourceName() const;
     String getWriteResourceName() const;
 
-    void applyNewSettingsImpl(const Poco::Util::AbstractConfiguration & config, const String & config_prefix);
-
     const String object_storage_root_path;
     Poco::Logger * log;
 
@@ -239,7 +237,6 @@ private:
     bool tryReserve(UInt64 bytes);
 
     const bool send_metadata;
-    std::atomic<bool> enable_page_cache {false};
 
     mutable std::mutex resource_mutex;
     String read_resource_name;

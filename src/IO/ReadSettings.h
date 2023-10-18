@@ -102,9 +102,10 @@ struct ReadSettings
     /// Don't populate cache when the read is not part of query execution (e.g. background thread).
     bool avoid_readthrough_cache_outside_query_context = true;
 
-    bool enable_page_cache = false;
+    //asdqwe assign these two
+    bool use_page_cache_for_disks_without_file_cache = false;
+    bool use_page_cache_for_disks_with_file_cache = false;
     bool read_from_page_cache_if_exists_otherwise_bypass_cache = false;
-    bool force_enable_page_cache = false;
     bool page_cache_inject_eviction = false;
     std::shared_ptr<PageCache> page_cache;
 
