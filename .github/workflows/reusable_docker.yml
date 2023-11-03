@@ -1,0 +1,112 @@
+### For the pure soul wishes to move it to another place
+# https://github.com/orgs/community/discussions/9050
+
+name: Build docker images
+'on':
+  workflow_call:
+    inputs:
+      missing_aarch64:
+        description: json string with missing aarch64 images (format image_name - digest)
+        required: true
+        type: string
+      missing_amd64:
+        description: json string with missing amd64 images (format image_name - digest)
+        required: true
+        type: string
+      # missing_multi:
+      #   description: json string with missing multiarch images (format image_name - digest)
+      #   required: true
+      #   type: string
+      digests:
+        description: json string with all images and their digests (format image_name - digest)
+        required: true
+        type: string
+      tag:
+        description: tag that will be applied for all multiarch images
+        required: true
+        type: string
+      # s3_report_path:
+      #   description: s3 path to upload done flag
+      #   required: true
+      #   type: string
+      # image_tag:
+      #   description: image tag
+      #   type: string
+      #   required: true
+
+jobs:
+  DockerBuildAarch64:
+    runs-on: [self-hosted, style-checker-aarch64]
+    if: |
+      !failure() && !cancelled() && ${{ contains(inputs.missing_aarch64, 'clickhouse') }}
+    env:
+      ARCH: aarch64
+    steps:
+      - name: Docker login
+        run: |
+          aws ssm get-parameter --region us-east-1 --name dockerhub_robot_password --query 'Parameter.Value' --output=text --with-decryption \
+            | docker login --username robotclickhouse --password-stdin
+      - name: Check out repository code
+        uses: ClickHouse/checkout@v1
+        with:
+          ref: ${{ github.event.after }}
+      - name: Build images
+        run: |
+          echo "${{ toJson(inputs.missing_aarch64) }}" > "${{ runner.temp }}/missing.json"
+          echo "${{ toJson(inputs.digests) }}" > "${{ runner.temp }}/images.json"
+          cat "${{ runner.temp }}/missing.json"
+          python3 "${GITHUB_WORKSPACE}/tests/ci/docker_images_check_by_digest.py" \
+            --suffix ${{ env.ARCH }} \
+            --digests "${{ runner.temp }}/images.json" \
+            --missing-images "${{ runner.temp }}/missing.json"
+      # - name: Upload job done flag
+      #   run: |
+      #     FILE=".ci_${{ github.job }}.ci"
+      #     touch "$FILE" && aws s3 cp "$FILE" "s3://${{ inputs.s3_report_path }}/" && rm "$FILE"
+  DockerBuildAmd64:
+    runs-on: [self-hosted, style-checker]
+    if: |
+      !failure() && !cancelled() && ${{ contains(inputs.missing_amd64, 'clickhouse') }}
+    env:
+      ARCH: amd64
+    steps:
+      - name: Docker login
+        run: |
+          aws ssm get-parameter --region us-east-1 --name dockerhub_robot_password --query 'Parameter.Value' --output=text --with-decryption \
+            | docker login --username robotclickhouse --password-stdin
+      - name: Check out repository code
+        uses: ClickHouse/checkout@v1
+        with:
+          ref: ${{ github.event.after }}
+      - name: Build images
+        run: |
+          echo "${{ toJson(inputs.missing_amd64) }}" > "${{ runner.temp }}/missing.json"
+          echo "${{ toJson(inputs.digests) }}" > "${{ runner.temp }}/images.json"
+          cat "${{ runner.temp }}/missing.json"
+          python3 "${GITHUB_WORKSPACE}/tests/ci/docker_images_check_by_digest.py" \
+            --suffix ${{ env.ARCH }} \
+            --digests "${{ runner.temp }}/images.json" \
+            --missing-images "${{ runner.temp }}/missing.json"
+      # - name: Upload job done flag
+      #   run: |
+      #     FILE=".ci_${{ github.job }}.ci"
+      #     touch "$FILE" && aws s3 cp "$FILE" "s3://${{ inputs.s3_report_path }}/" && rm "$FILE"
+  DockerMultiArchManifest:
+    needs: [DockerBuildAmd64, DockerBuildAarch64]
+    runs-on: [self-hosted, style-checker]
+    # if: |
+    #   !failure() && !cancelled() && ${{ contains(inputs.missing_multi, 'clickhouse') }}
+    steps:
+      - name: Check out repository code
+        uses: ClickHouse/checkout@v1
+      - name: Images check
+        run: |
+          echo "${{ inputs.digests }}" > "${{ runner.temp }}/images.json"
+          cd "$GITHUB_WORKSPACE/tests/ci"
+          python3 docker_manifests_merge_by_digest.py --suffix amd64 --suffix aarch64 \
+            --digests "${{ runner.temp }}/images.json" \
+            --tag "${{ inputs.tag }}"
+      # - name: Upload job done flag
+      #   run: |
+      #     FILE=".ci_${{ github.job }}.ci"
+      #     touch "$FILE" && aws s3 cp "$FILE" "s3://${{ inputs.s3_report_path }}/" && rm "$FILE"

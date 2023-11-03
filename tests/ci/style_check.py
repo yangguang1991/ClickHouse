@@ -20,8 +20,8 @@ from commit_status_helper import (
     post_commit_status,
     update_mergeable_check,
 )
-from docker_pull_helper import get_image_with_version
-from env_helper import GITHUB_WORKSPACE, TEMP_PATH
+
+from env_helper import GITHUB_WORKSPACE, TEMP_PATH, DOCKER_TAG
 from get_robot_token import get_best_robot_token
 from github_helper import GitHub
 from git_helper import git_runner
@@ -79,7 +79,7 @@ def process_result(
 
 def parse_args():
     parser = argparse.ArgumentParser("Check and report style issues in the repository")
-    parser.add_argument("--push", default=True, help=argparse.SUPPRESS)
+    parser.add_argument("--push", default=False, help=argparse.SUPPRESS)
     parser.add_argument(
         "--no-push",
         action="store_false",
@@ -161,13 +161,13 @@ def main():
         code = int(state != "success")
         sys.exit(code)
 
-    docker_image = get_image_with_version(temp_path, "clickhouse/style-test")
+    # docker_image = get_image_with_version(temp_path, "clickhouse/style-test")
     s3_helper = S3Helper()
 
     cmd = (
         f"docker run -u $(id -u ${{USER}}):$(id -g ${{USER}}) --cap-add=SYS_PTRACE "
         f"--volume={repo_path}:/ClickHouse --volume={temp_path}:/test_output "
-        f"{docker_image}"
+        f"clickhouse/style-test:{DOCKER_TAG}"
     )
 
     logging.info("Is going to run the command: %s", cmd)

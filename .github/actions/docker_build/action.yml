@@ -1,0 +1,139 @@
+name: 'Docker Build'
+description: 'Build Ddocker image'
+inputs:
+  tag:
+    required: true
+    type: string
+runs:
+  using: "composite"
+  steps:
+    - name: Set envs
+      shell: bash
+      run: |
+        if [ ${{ runner.arch }} == "X64" ]; then
+          echo ARCH=amd64 >> "$GITHUB_ENV"
+        elif [ ${{ runner.arch }} == "ARM64" ]; then
+          echo ARCH=aarch64 >> "$GITHUB_ENV"
+        else
+          echo "Error: Unknown arch: ${{ runner.arch }}" && exit 1
+        fi
+        cat >> "$GITHUB_ENV" << 'EOF'
+        IMAGE_NAME=${{ inputs.name }}
+        IMAGE_TAG=${{ inputs.tag }}
+        # DOCKER_JOB_DIGEST=${{ inputs.job_digest }}
+        # DOCKERFILE_PATH=${{ inputs.dockerfile_path }}
+        # IMAGE_TAG_OLDSCOOL=0-${{ github.event.after }}
+        EOF
+    - name: Build image
+      shell: bash
+      run: |
+        echo ${{ runner.arch }}
+        if [ "$ARCH" == amd64 ]; then
+          DOCKER_PATH_AND_NAME=( \
+              # no dep
+              "docker/test/integration/s3_proxy"            "s3-proxy" \
+              "docker/test/integration/resolver"            "python-bottle" \
+              "docker/test/compatibility/centos"            "test-old-centos" \
+              "docker/test/compatibility/ubuntu"            "test-old-ubuntu" \
+              "docker/test/integration/runner"              "integration-tests-runner" \
+              "docker/test/integration/helper_container"    "integration-helper" \
+              "docker/test/integration/mysql_golang_client" "mysql-golang-client" \
+              "docker/test/integration/dotnet_client"       "dotnet-client" \
+              "docker/test/integration/mysql_java_client"   "mysql-java-client" \
+              "docker/test/integration/mysql_js_client"     "mysql-js-client" \
+              "docker/test/integration/mysql_php_client"    "mysql-php-client" \
+              "docker/test/integration/postgresql_java_client" "postgresql-java-client" \
+              "docker/test/integration/kerberos_kdc"        "kerberos-kdc" \
+              "docker/test/integration/kerberized_hadoop"   "kerberized-hadoop" \
+              "docker/test/sqlancer"                        "sqlancer-test" \
+              "docker/test/install/deb"                     "install-deb-test" \
+              "docker/test/install/rpm"                     "install-rpm-test" \
+              "docker/test/integration/nginx_dav"           "nginx-dav" \
+              "docker/docs/builder"                         "docs-builder" \
+              "docker/test/util"                            "test-util" \
+
+              # test-util
+              "docker/packager/binary"             "binary-builder" \
+              "docker/test/base"                   "test-base" \
+
+              # test-base
+              "docker/test/integration/base"        "integration-test" \
+              "docker/test/fuzzer"                  "fuzzer" \
+              "docker/test/libfuzzer"               "libfuzzer" \
+              "docker/test/performance-comparison"  "performance-comparison" \
+              "docker/test/keeper-jepsen"           "keeper-jepsen-test" \
+              "docker/test/server-jepsen"           "server-jepsen-test" \
+              "docker/test/stateless"               "stateless-test" \
+              "docker/test/stateful"                "stateful-test" \
+              "docker/test/unit"                    "unit-test" \
+              "docker/test/stress"                  "stress-test" \
+              "docker/test/upgrade"                 "upgrade-check" \
+              "docker/test/fasttest"                "fasttest" \
+              "docker/test/style"                   "style-test" \
+              "docker/test/sqltest"                 "sqltest" \
+              "docker/test/sqllogic"                "sqllogic-test" \
+              )
+        elif [ "$ARCH" == aarch64 ]; then
+          DOCKER_PATH_AND_NAME=( \
+              # no dep
+              "docker/test/integration/s3_proxy"            "s3-proxy" \
+              "docker/test/integration/resolver"            "python-bottle" \
+              "docker/test/compatibility/centos"            "test-old-centos" \
+              "docker/test/compatibility/ubuntu"            "test-old-ubuntu" \
+              ### "docker/test/integration/runner"              "integration-tests-runner"  ERROR: https://github.com/ClickHouse/ClickHouse/actions/runs/6802146006/job/18494634559?pr=56317\
+              "docker/test/integration/helper_container"    "integration-helper" \
+              "docker/test/integration/mysql_golang_client" "mysql-golang-client" \
+              "docker/test/integration/dotnet_client"       "dotnet-client" \
+              "docker/test/integration/mysql_java_client"   "mysql-java-client" \
+              "docker/test/integration/mysql_js_client"     "mysql-js-client" \
+              "docker/test/integration/mysql_php_client"    "mysql-php-client" \
+              "docker/test/integration/postgresql_java_client" "postgresql-java-client" \
+              ### "docker/test/integration/kerberos_kdc"        "kerberos-kdc" \ ERROR: https://github.com/ClickHouse/ClickHouse/actions/runs/6802328621/job/18495211295?pr=56317
+              "docker/test/integration/kerberized_hadoop"   "kerberized-hadoop" \
+              "docker/test/sqlancer"                        "sqlancer-test" \
+              "docker/test/install/deb"                     "install-deb-test" \
+              "docker/test/install/rpm"                     "install-rpm-test" \
+              "docker/test/integration/nginx_dav"           "nginx-dav" \
+              "docker/docs/builder"                         "docs-builder" \
+              "docker/test/util"                            "test-util" \
+
+              # test-util
+              "docker/packager/binary"             "binary-builder" \
+              "docker/test/base"                   "test-base" \
+
+              # test-base
+              "docker/test/integration/base"        "integration-test" \
+              "docker/test/fuzzer"                  "fuzzer" \
+              "docker/test/libfuzzer"               "libfuzzer" \
+              "docker/test/performance-comparison"  "performance-comparison" \
+              "docker/test/keeper-jepsen"           "keeper-jepsen-test" \
+              "docker/test/server-jepsen"           "server-jepsen-test" \
+              "docker/test/stateless"               "stateless-test" \
+              "docker/test/stateful"                "stateful-test" \
+              "docker/test/unit"                    "unit-test" \
+              "docker/test/stress"                  "stress-test" \
+              "docker/test/upgrade"                 "upgrade-check" \
+              "docker/test/fasttest"                "fasttest" \
+              "docker/test/style"                   "style-test" \
+              "docker/test/sqltest"                 "sqltest" \
+              "docker/test/sqllogic"                "sqllogic-test" \
+              )
+        else
+          echo ERROR && exit 1
+        fi
+
+        for ((i=0; i<${#DOCKER_PATH_AND_NAME[@]}; i+=2));
+        do
+          path="${DOCKER_PATH_AND_NAME[i]}"
+          name="${DOCKER_PATH_AND_NAME[i+1]}"
+          echo "Building image: $name [$path]"
+          echo "Command: docker buildx build --builder default --label build-url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} \
+            --build-arg="FROM_TAG=$IMAGE_TAG" --build-arg CACHE_INVALIDATOR=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} \
+            --tag "clickhouse/$name:$IMAGE_TAG-$ARCH" \
+            --cache-from type=registry,ref="clickhouse/$name:latest" --cache-to type=inline,mode=max --push --progress plain "$path"
+          time docker buildx build --builder default --label build-url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} \
+            --build-arg="FROM_TAG=$IMAGE_TAG" --build-arg CACHE_INVALIDATOR=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} \
+            --tag "clickhouse/$name:$IMAGE_TAG-$ARCH" \
+            --cache-from type=registry,ref="clickhouse/$name:latest" --cache-to type=inline,mode=max --push --progress plain "$path"
+          echo "Building image: $name - done"
+        done;

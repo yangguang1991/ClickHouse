@@ -18,6 +18,14 @@ name: Build ClickHouse
         description: the label of runner to use
         default: builder
         type: string
+      s3_report_path:
+        description: s3 path to upload build report too
+        required: true
+        type: string
+      builder_tag:
+        description: builder image tag
+        type: string
+        required: true
       additional_envs:
         description: additional ENV variables to setup the job
         type: string
@@ -39,6 +47,7 @@ jobs:
           cat >> "$GITHUB_ENV" << 'EOF'
           IMAGES_PATH=${{runner.temp}}/images_path
           GITHUB_JOB_OVERRIDDEN=Build-${{inputs.build_name}}
+          DOCKER_TAG=${{ inputs.builder_tag }}
           ${{inputs.additional_envs}}
           EOF
           python3 "$GITHUB_WORKSPACE"/tests/ci/ci_config.py --build-name "${{inputs.build_name}}" >> "$GITHUB_ENV"
@@ -56,19 +65,14 @@ jobs:
         uses: ./.github/actions/common_setup
         with:
           job_type: build_check
-      - name: Download changed images
-        uses: actions/download-artifact@v3
-        with:
-          name: changed_images
-          path: ${{ env.IMAGES_PATH }}
       - name: Build
         run: |
           cd "$REPO_COPY/tests/ci" && python3 build_check.py "$BUILD_NAME"
-      - name: Upload build URLs to artifacts
-        if: ${{ success() || failure() }}
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ env.BUILD_URLS }}
-          path: ${{ env.TEMP_PATH }}/${{ env.BUILD_URLS }}.json
+      - name: Upload build report
+        run: |
+          ls "${{ env.TEMP_PATH }}/${{ env.BUILD_URLS }}.json" || exit 1
+          aws s3 cp "${{ env.TEMP_PATH }}/${{ env.BUILD_URLS }}.json" "s3://${{inputs.s3_report_path}}/${{inputs.build_name}}.json"
+      - name: Upload test done flag
+        run: touch tmp.file && aws s3 cp tmp.file "s3://${{inputs.s3_report_path}}/.ci_${{ inputs.build_name }}" && rm tmp.file
       - name: Clean
         uses: ./.github/actions/clean

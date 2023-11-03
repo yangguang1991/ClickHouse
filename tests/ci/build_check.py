@@ -9,14 +9,14 @@ import time
 
 from ci_config import CI_CONFIG, BuildConfig
 from ccache_utils import CargoCache
-from docker_pull_helper import get_image_with_version
+
 from env_helper import (
     GITHUB_JOB_API_URL,
-    IMAGES_PATH,
     REPO_COPY,
     S3_BUILDS_BUCKET,
     S3_DOWNLOAD,
     TEMP_PATH,
+    DOCKER_TAG,
 )
 from git_helper import Git, git_runner
 from pr_info import PRInfo
@@ -249,8 +249,11 @@ def main():
     # put them as github actions artifact (result)
     check_for_success_run(s3_helper, s3_path_prefix, build_name, version)
 
-    docker_image = get_image_with_version(IMAGES_PATH, IMAGE_NAME)
-    image_version = docker_image.version
+    # FIXME:
+    # docker_image = get_image_with_version(IMAGES_PATH, IMAGE_NAME)
+    # image_version = docker_image.version
+    assert DOCKER_TAG
+    image_version = DOCKER_TAG
 
     logging.info("Got version from repo %s", version.string)
 
