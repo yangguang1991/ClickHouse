@@ -267,7 +267,7 @@ jobs:
       - BuilderDebUBsan
     uses: ./.github/workflows/reusable_test.yml
     with:
-      test_name: ClickHouse special build check
+      test_name: ClickHouse build check
       runner_type: style-checker
       additional_envs: |
         NEEDS_DATA<<NDENV
