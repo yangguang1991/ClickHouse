@@ -62,6 +62,7 @@ jobs:
     runs-on: [self-hosted, '${{inputs.runner_type}}']
     needs: [PrepareStrategy]
     strategy:
+      fail-fast: false  # we always wait for entire matrix
       matrix:
         batch: ${{ fromJson(needs.PrepareStrategy.outputs.batches) }}
     steps:
